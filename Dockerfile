@@ -18,3 +18,6 @@ RUN curl -L https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}
     mv ./linux-amd64/helm /usr/local/bin/helm && \
     chmod +x /usr/local/bin/helm && \
     rm -rf ./linux-amd64
+
+USER 1987
+ONBUILD USER root
