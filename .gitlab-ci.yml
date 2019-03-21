@@ -11,7 +11,7 @@ build:
   script:
     - export DOCKER_IMAGE_VERSION_PATCH=`echo -n $DOCKER_IMAGE_VERSION_REVISION | sed -n -E 's/([0-9]+)\.([0-9]+)\.([0-9]+)(-([0-9]+))?/\1.\2.\3/p'`
     - export DOCKER_IMAGE_VERSION_MINOR=`echo -n $DOCKER_IMAGE_VERSION_REVISION | sed -n -E 's/([0-9]+)\.([0-9]+)\.([0-9]+)(-([0-9]+))?/\1.\2/p'`
-    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --build-arg KUBE_VERSION="1.13.2" --build-arg TERRAFORM_VERSION="0.11.11" --build-arg HELM_VERSION="2.13.0" --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_REVISION --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_PATCH --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_MINOR
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --build-arg KUBE_VERSION="1.13.2" --build-arg TERRAFORM_VERSION="0.11.13" --build-arg HELM_VERSION="2.13.0" --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_REVISION --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_PATCH --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_MINOR
   tags:
     - docker
   only:
