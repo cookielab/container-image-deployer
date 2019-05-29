@@ -14,6 +14,7 @@ build:
     - export DOCKER_IMAGE_VERSION_MINOR=`echo -n $DOCKER_IMAGE_VERSION_REVISION | sed -n -E 's/([0-9]+)\.([0-9]+)\.([0-9]+)(-([0-9]+))?/\1.\2/p'`
     - |
       /kaniko/executor \
+      --single-snapshot \
       --context $CI_PROJECT_DIR \
       --dockerfile $CI_PROJECT_DIR/Dockerfile \
       --build-arg KUBE_VERSION="1.14.2" \
