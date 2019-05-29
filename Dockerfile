@@ -1,4 +1,4 @@
-FROM cookielab/alpine:3.8
+FROM cookielab/alpine:3.9
 
 ARG KUBE_VERSION
 ARG TERRAFORM_VERSION
