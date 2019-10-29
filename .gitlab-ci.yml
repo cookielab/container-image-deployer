@@ -7,7 +7,7 @@ build:
     DOCKER_IMAGE: cookielab/deployer
     DOCKER_IMAGE_VERSION_REVISION: $CI_COMMIT_TAG
     KUBERNETES_VERSION: 1.16.2
-    TERRAFORM_VERSION: 0.12.5
+    TERRAFORM_VERSION: 0.12.12
     HELM_VERSION: 2.14.2
   before_script:
     - mkdir -p $DOCKER_CONFIG
