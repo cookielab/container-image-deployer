@@ -25,8 +25,8 @@ RUN curl -sL https://sentry.io/get-cli/ | bash
 
 USER 1987
 
-RUN mkdir -p -m 0700 ~/.ssh
-RUN touch ~/.ssh/known_hosts
-RUN chmod 0644 ~/.ssh/known_hosts
+RUN mkdir -p -m 0700 /container/.ssh
+RUN touch /container/.ssh/known_hosts
+RUN chmod 0644 /container/.ssh/known_hosts
 
 ONBUILD USER root
