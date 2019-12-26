@@ -15,7 +15,7 @@ RUN unzip ./terraform.zip
 RUN rm ./terraform.zip
 RUN mv ./terraform /usr/local/bin/terraform
 RUN chmod +x /usr/local/bin/terraform
-RUN curl -L https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz -o ./helm.tar.gz
+RUN curl -L https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz -o ./helm.tar.gz
 RUN tar -xzf ./helm.tar.gz
 RUN rm ./helm.tar.gz
 RUN mv ./linux-amd64/helm /usr/local/bin/helm
