@@ -3,6 +3,7 @@ FROM cookielab/alpine:3.11
 ARG KUBE_VERSION
 ARG TERRAFORM_VERSION
 ARG HELM_VERSION
+ARG SENTRY_CLI_VERSION
 ARG KUBELESS_VERSION
 
 ADD kube-connect /usr/local/bin/kube-connect
@@ -22,8 +23,10 @@ RUN rm ./helm.tar.gz
 RUN mv ./linux-amd64/helm /usr/local/bin/helm
 RUN chmod +x /usr/local/bin/helm
 RUN rm -rf ./linux-amd64
-RUN curl -sL https://sentry.io/get-cli/ | bash
-RUN curl -L https://github.com/kubeless/kubeless/releases/download/v${KUBELESS_VERSION}/kubeless_linux-amd64.zip -o /kubeless.zip
+RUN curl -L https://downloads.sentry-cdn.com/sentry-cli/${SENTRY_CLI_VERSION}/sentry-cli-Linux-x86_64 -o ./sentry-cli
+RUN mv ./sentry-cli /usr/local/bin/sentry-cli
+RUN chmod +x /usr/local/bin/sentry-cli
+RUN curl -L https://github.com/kubeless/kubeless/releases/download/v${KUBELESS_VERSION}/kubeless_linux-amd64.zip -o ./kubeless.zip
 RUN unzip ./kubeless.zip
 RUN rm ./kubeless.zip
 RUN mv ./bundles/kubeless_linux-amd64/kubeless /usr/local/bin/kubeless
