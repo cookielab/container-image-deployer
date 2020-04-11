@@ -30,7 +30,5 @@ build:
       --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_REVISION \
       --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_PATCH \
       --destination $DOCKER_IMAGE:$DOCKER_IMAGE_VERSION_MINOR
-  tags:
-    - docker
   only:
     - tags
