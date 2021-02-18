@@ -1,10 +1,8 @@
-FROM cookielab/alpine:3.12
+FROM cookielab/alpine:3.13
 
 ARG KUBE_VERSION
-ARG TERRAFORM_VERSION
 ARG HELM_VERSION
 ARG SENTRY_CLI_VERSION
-ARG KUBELESS_VERSION
 
 ADD kube-connect /usr/local/bin/kube-connect
 
