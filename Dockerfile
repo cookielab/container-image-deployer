@@ -6,7 +6,7 @@ ARG SENTRY_CLI_VERSION
 
 ADD kube-connect /usr/local/bin/kube-connect
 
-RUN apk --update --no-cache add ca-certificates openssh bash curl gzip unzip git jq
+RUN apk --update --no-cache add ca-certificates openssh bash curl gzip unzip git jq gettext
 RUN chmod +x /usr/local/bin/kube-connect
 RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v${KUBE_VERSION}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
 RUN chmod +x /usr/local/bin/kubectl
