@@ -1,38 +1,41 @@
-FROM cookielab/alpine:3.13
+FROM cookielab/slim:12.0 AS build
 
-ARG KUBE_VERSION
+ARG TARGETARCH
+WORKDIR /tmp
+
+RUN apt update && apt install -y curl zip
+
+ARG KUBECTL_VERSION
+RUN curl -L "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/kubectl
+RUN chmod +x /usr/local/kubectl
+
 ARG HELM_VERSION
-ARG SENTRY_CLI_VERSION
-ARG KUBEDOG_VERSION
-ARG KAIL_VERSION
-
-ADD kube-connect /usr/local/bin/kube-connect
-
-RUN apk --update --no-cache add ca-certificates openssh bash curl gzip unzip git jq gettext
-RUN chmod +x /usr/local/bin/kube-connect
-RUN curl -L https://storage.googleapis.com/kubernetes-release/release/v${KUBE_VERSION}/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
-RUN chmod +x /usr/local/bin/kubectl
-RUN curl -L https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz -o ./helm.tar.gz
-RUN tar -xzf ./helm.tar.gz
-RUN rm ./helm.tar.gz
-RUN mv ./linux-amd64/helm /usr/local/bin/helm
+RUN curl -L "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" -o /tmp/helm.tar.gz
+RUN tar -xzf /tmp/helm.tar.gz
+RUN rm /tmp/helm.tar.gz
+RUN mv /tmp/linux-${TARGETARCH}/helm /usr/local/bin/helm
 RUN chmod +x /usr/local/bin/helm
-RUN rm -rf ./linux-amd64
-RUN curl -L https://downloads.sentry-cdn.com/sentry-cli/${SENTRY_CLI_VERSION}/sentry-cli-Linux-x86_64 -o ./sentry-cli
-RUN mv ./sentry-cli /usr/local/bin/sentry-cli
-RUN chmod +x /usr/local/bin/sentry-cli
-RUN curl -L https://tuf.kubedog.werf.io/targets/releases/${KUBEDOG_VERSION}/linux-amd64/bin/kubedog -o /usr/local/bin/kubedog
-RUN chmod +x /usr/local/bin/kubedog
-RUN curl -L https://github.com/boz/kail/releases/download/v${KAIL_VERSION}/kail_${KAIL_VERSION}_linux_amd64.tar.gz -o /tmp/kail.tar.gz && \
-  tar xvzf /tmp/kail.tar.gz && \
-  mv kail /usr/local/bin/ && \
-  rm -rf /tmp/*
-RUN chmod +x /usr/local/bin/kail
+
+ARG SENTRY_CLI_VERSION
+RUN curl -sL https://sentry.io/get-cli/ | INSTALL_DIR="/usr/local/bin" sh
+
+ARG AWS_CLI_VERSION
+COPY download-aws-cli.sh /tmp/download-aws-cli.sh
+RUN /tmp/download-aws-cli.sh
+
+FROM cookielab/slim:12.0
+
+RUN apt update && apt install -y curl jq \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/local/bin /usr/local/bin
+
+COPY --from=build /tmp/aws /tmp/aws
+RUN /tmp/aws/install
+RUN rm -rf /tmp/aws
+
+ARG GITHUB_TOKEN
 
 USER 1987
-
-RUN mkdir -p -m 0700 /container/.ssh
-RUN touch /container/.ssh/known_hosts
-RUN chmod 0644 /container/.ssh/known_hosts
 
 ONBUILD USER root

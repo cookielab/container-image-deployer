@@ -1,0 +1,7 @@
+.github
+README.md
+LICENSE.md
+Dockerfile
+.editorconfig
+.gitignore
+testing.sh

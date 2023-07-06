@@ -1,0 +1,139 @@
+name: Container Image
+on:
+  push:
+    branches:
+      - 'main'
+    tags:        
+      - '**'
+
+env:
+  kubectl_version: 1.27.3
+  helm_version: 3.12.1
+  sentry_cli_version: 2.19.4
+  aws_cli_version: 2.12.7
+
+jobs:
+  build:
+    name: Build container image and push it to registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: public
+
+      - name: Parse version
+        id: get-version
+        uses: battila7/get-version-action@v2
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build and push - testing - slim
+        uses: docker/build-push-action@v3
+        timeout-minutes: 15
+        if: ${{ !steps.get-version.outputs.is-semver }}
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            KUBECTL_VERSION=${{ env.kubectl_version }}
+            HELM_VERSION=${{ env.helm_version }}
+            SENTRY_CLI_VERSION=${{ env.sentry_cli_version }}
+            AWS_CLI_VERSION=${{ env.aws_cli_version }}
+          tags: |
+            cookielab/deployer:${{ github.ref_name }}-slim
+            public.ecr.aws/cookielab/deployer:${{ github.ref_name }}-slim
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-slim
+      
+      - name: Build and push - pre-release - slim
+        uses: docker/build-push-action@v3
+        timeout-minutes: 15
+        if: ${{ steps.get-version.outputs.is-semver && steps.get-version.outputs.prerelease != '' }}
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            KUBECTL_VERSION=${{ env.kubectl_version }}
+            HELM_VERSION=${{ env.helm_version }}
+            SENTRY_CLI_VERSION=${{ env.sentry_cli_version }}
+            AWS_CLI_VERSION=${{ env.aws_cli_version }}
+          tags: |
+            cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}-slim
+      
+      - name: Build and push - stable - slim
+        uses: docker/build-push-action@v3
+        timeout-minutes: 15
+        if: ${{ steps.get-version.outputs.is-semver && steps.get-version.outputs.prerelease == '' }}
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            KUBECTL_VERSION=${{ env.kubectl_version }}
+            HELM_VERSION=${{ env.helm_version }}
+            SENTRY_CLI_VERSION=${{ env.sentry_cli_version }}
+            AWS_CLI_VERSION=${{ env.aws_cli_version }}
+          tags: |
+            cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
+            cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}
+            cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}-slim
+            cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}
+            cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}-slim
+            cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}
+            cookielab/deployer:${{ steps.get-version.outputs.major }}-slim
+            cookielab/deployer:${{ steps.get-version.outputs.major }}
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}-slim
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}-slim
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}-slim
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}-slim
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}-slim
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}-slim
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}-slim
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}
