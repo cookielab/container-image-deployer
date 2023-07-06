@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -xe
+set -e
 
 MISSING_ENV=0
 
