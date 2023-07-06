@@ -6,8 +6,8 @@ WORKDIR /tmp
 RUN apt update && apt install -y curl zip
 
 ARG KUBECTL_VERSION
-RUN curl -L "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/kubectl
-RUN chmod +x /usr/local/kubectl
+RUN curl -L "https://dl.k8s.io/release/v${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl
+RUN chmod +x /usr/local/bin/kubectl
 
 ARG HELM_VERSION
 RUN curl -L "https://get.helm.sh/helm-v${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" -o /tmp/helm.tar.gz
@@ -20,8 +20,10 @@ ARG SENTRY_CLI_VERSION
 RUN curl -sL https://sentry.io/get-cli/ | INSTALL_DIR="/usr/local/bin" sh
 
 ARG AWS_CLI_VERSION
-COPY download-aws-cli.sh /tmp/download-aws-cli.sh
+COPY build-scripts/download-aws-cli.sh /tmp/download-aws-cli.sh
 RUN /tmp/download-aws-cli.sh
+
+COPY scripts/deploy-s3-cf.sh /usr/local/bin/deploy-s3-cf
 
 FROM cookielab/slim:12.0
 
