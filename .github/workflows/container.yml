@@ -75,9 +75,9 @@ jobs:
             SENTRY_CLI_VERSION=${{ env.sentry_cli_version }}
             AWS_CLI_VERSION=${{ env.aws_cli_version }}
           tags: |
-            cookielab/deployer:${{ github.ref_name }}-slim
-            public.ecr.aws/cookielab/deployer:${{ github.ref_name }}-slim
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-slim
+            cookielab/deployer:${{ github.ref_name }}
+            public.ecr.aws/cookielab/deployer:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
       
       - name: Build and push - pre-release - slim
         uses: docker/build-push-action@v3
@@ -94,9 +94,9 @@ jobs:
             SENTRY_CLI_VERSION=${{ env.sentry_cli_version }}
             AWS_CLI_VERSION=${{ env.aws_cli_version }}
           tags: |
-            cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
-            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
-            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}-slim
+            cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}
+            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}
+            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}
       
       - name: Build and push - stable - slim
         uses: docker/build-push-action@v3
@@ -113,27 +113,15 @@ jobs:
             SENTRY_CLI_VERSION=${{ env.sentry_cli_version }}
             AWS_CLI_VERSION=${{ env.aws_cli_version }}
           tags: |
-            cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
             cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}
-            cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}-slim
             cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}
-            cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}-slim
             cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}
-            cookielab/deployer:${{ steps.get-version.outputs.major }}-slim
             cookielab/deployer:${{ steps.get-version.outputs.major }}
-            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}-slim
             public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.version-without-v }}
-            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}-slim
             public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}
-            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}-slim
             public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}
-            public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}-slim
             public.ecr.aws/cookielab/deployer:${{ steps.get-version.outputs.major }}
-            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}-slim
             ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}
-            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}-slim
             ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}.${{ steps.get-version.outputs.patch }}
-            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}-slim
             ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}.${{ steps.get-version.outputs.minor }}
-            ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}-slim
             ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.major }}
