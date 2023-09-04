@@ -25,9 +25,11 @@ RUN /tmp/download-aws-cli.sh
 
 COPY scripts/deploy-s3-cf.sh /usr/local/bin/deploy-s3-cf
 
+FROM cookielab/container-image-tools:1.4.0-aws AS container-image-tools
+
 FROM cookielab/slim:12.0
 
-RUN apt update && apt install -y curl jq \
+RUN apt update && apt install -y curl jq skopeo \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /usr/local/bin /usr/local/bin
@@ -36,7 +38,10 @@ COPY --from=build /tmp/aws /tmp/aws
 RUN /tmp/aws/install
 RUN rm -rf /tmp/aws
 
-ARG GITHUB_TOKEN
+RUN mkdir ~/.docker
+COPY --from=container-image-tools /container-image-tools/bin/docker-* /usr/local/bin/
+COPY --from=container-image-tools /etc/containers/policy.json /etc/containers/policy.json
+COPY registries.conf /etc/containers/registries.conf
 
 USER 1987
 
