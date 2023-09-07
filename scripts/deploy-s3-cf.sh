@@ -1,84 +1,105 @@
 #!/bin/sh
 
 help() {
-  echo "Usage: $0 [-h] [-v] -d <SOURCE_DIR> -b <AWS_S3_BUCKET_URI> -i <AWS_CF_DISTRIBUTION_ID>"
+  echo "Usage: $0 [-h] [-v] -s <SOURCE_DIR> -u <AWS_S3_BUCKET_URI> -i <AWS_CF_DISTRIBUTION_ID>"
   echo ""
   echo "Options:"
-  echo "  -d SOURCE_DIR"
-  echo "        Local source directory. Required!"
-  echo "  -b AWS_S3_BUCKET_URI"
-  echo "        AWS S3 bucket URI in the following format: 's3://<bucket>/[<directory>]'. Required!"
+  echo "  -s SOURCE_DIR"
+  echo "        Local source directory"
+  echo "        REQUIRED (Can be also provided via environment variable)"
+  echo "  -u AWS_S3_BUCKET_URI"
+  echo "        AWS S3 bucket URI in the following format: 's3://<bucket>/[<subdir>]'"
+  echo "        REQUIRED (Can be also provided via environment variable or constructed. See below)"
   echo "  -i AWS_CF_DISTRIBUTION_ID"
-  echo "        AWS CloudFront Distribution ID. Required!"
+  echo "        AWS CloudFront Distribution ID"
+  echo "        REQUIRED (Can be also provided via environment variable)"
   echo "  -v    Verbose output (print API commands being executed)"
   echo "  -h    Display this help message"
   echo ""
   echo "Other supported environment variables:"
   echo "  AWS_S3_BUCKET  Can be used to construct the S3 bucket URI."
   echo "                 If used, AWS_S3_BUCKET_URI doesn't have to be set."
-  echo "  AWS_S3_PATH    Can be used to construct the S3 bucket URI. Has to start with '/'."
-  echo "                 Works only when AWS_S3_BUCKET is set. Defaults to '/'."
-  echo ""
-  echo "All mandatory options can be provided as environment variables."
+  echo "  AWS_S3_PATH    Can be used to further specify bucket path in the S3 URI."
+  echo "                 Has to start with '/'. Works only when AWS_S3_BUCKET is set."
+  echo "                 Defaults to '/'."
 }
 
+# Format functions
 log() {
   if [ $# -eq 2 ]; then
-    printf " -> %-32s %s\n" "${1}:" "$2" >&2
+    printf -- "--> %-28s %s\n" "${1}:" "$2" >&2
   else
     echo "$@" >&2
   fi
 }
 
-# Copy to S3
+banner() {
+  echo ">>> $*" >&2
+}
+
+fail() {
+  echo "==> $*" >&2
+  return 1
+}
+
+# S3: Deploy
 # ==========
-# Wrapper to recursively copy the source directory to the S3 bucket URI
+# Wrapper to recursively copy the source directory to
+# the S3 bucket URI
 #
 # Requires:
-# - the source directory (-d / $SOURCE_DIR)
-# - the S3 Bucket URI (-b / $AWS_S3_BUCKET_URI)
+# - source directory
+#     (-s / $SOURCE_DIR)
+# - AWS S3 Bucket URI
+#     (-u / $AWS_S3_BUCKET_URI)
 #
-s3_cp() {
+s3_deploy() {
   src_dir="${1}"
   s3_uri="${2}"
   s3_bucket=$(echo "${s3_uri}" | awk -F/ '{print $3}')
-  s3_dir=/$(echo "${s3_uri}" | awk -F/ 'BEGIN { OFS="/"; ORS=""; } { for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS)}' | sed 's|/*$||')
-  log "Source Directory" "${src_dir}"
-  log "Destination S3 bucket name" "${s3_bucket}"
-  log "Destination S3 bucket directory" "${s3_dir}"
+  s3_dir=/$(echo "${s3_uri}" |\
+    awk -F/ 'BEGIN { OFS="/"; ORS=""; } { for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS)}' |\
+    sed 's|/*$||' \
+  )
+  log "Source directory" "${src_dir}"
+  log "Destination S3 Bucket name" "${s3_bucket}"
+  log "Destination S3 Bucket path" "${s3_dir}"
   cmd_opts="--recursive"
   test "${VERBOSE}" -gt 0 && set -x
   aws s3 cp ${cmd_opts} "${src_dir}" "s3://${s3_bucket}${s3_dir}"
-  ret=$?
-  test "${VERBOSE}" -gt 0 && set +x
+  ret=$?; set +x
   return ${ret}
 }
 
-# CloudFront invalidation
-# =======================
-# Wrapper to retrieve the Invalidation ID for the `cf_wait` function.
+# CloudFront: Invalidate
+# ======================
+# Wrapper to trigger and retrieve the Invalidation ID
+# for the `cf_wait` function.
 #
 # Requires:
-# - the CloudFront Distribution ID (-i / $AWS_CF_DISTRIBUTION_ID)
+# - AWS CloudFront Distribution ID
+#     (-i / $AWS_CF_DISTRIBUTION_ID)
 #
 cf_invalidate() {
   cf_dist_id="${1}"
   log "CloudFront Distribution ID" "${cf_dist_id}"
   test "${VERBOSE}" -gt 0 && set -x
   val=$(aws cloudfront create-invalidation --distribution-id "${cf_dist_id}" --paths '/*' --output json)
-  ret=$?
-  test "${VERBOSE}" -gt 0 && set +x
+  ret=$?; set +x
   echo "${val}" | jq -r .Invalidation.Id
   return ${ret}
 }
 
-# CloudFront wait-to-finish invalidation
-# ======================================
-# This just waits for the CloudFront Invalidation to finish.
+# CloudFront: Wait
+# ================
+# This just waits for the CloudFront Invalidation
+# to finish.
 #
 # Requires:
-# - the CloudFront Distribution ID (-i / $AWS_CF_DISTRIBUTION_ID)
-# - the CloudFront Invalidation ID (value from cf_invalidate)
+# - AWS CloudFront Distribution ID
+#     (-i / $AWS_CF_DISTRIBUTION_ID)
+# - AWS CloudFront Invalidation ID
+#     (value from cf_invalidate)
 #
 cf_wait() {
   cf_dist_id="${1}"
@@ -86,14 +107,15 @@ cf_wait() {
   log "CloudFront Invalidation ID" "${cf_inv_id}"
   test "${VERBOSE}" -gt 0 && set -x
   aws cloudfront wait invalidation-completed --distribution-id "${cf_dist_id}" --id "${cf_inv_id}"
-  ret=$?
-  test "${VERBOSE}" -gt 0 && set +x
+  ret=$?; set +x
   return ${ret}
 }
 
-########################################################################################
-set -e
+##################
+### Initialize ###
+##################
 
+set -e
 OPTIND=1
 VERBOSE=0
 ERR=0
@@ -102,37 +124,47 @@ ERR=0
 test -n "${AWS_S3_BUCKET}" && AWS_S3_BUCKET_URI="s3://${AWS_S3_BUCKET}${AWS_S3_PATH:-/}"
 
 # Parse command line
-while getopts "h?d:b:i:v?" opt; do
+while getopts "h?s:u:i:v?" opt; do
   case "${opt}" in
     h) help && exit 0 ;;
-    d) SOURCE_DIR="${OPTARG}" ;;
-    b) AWS_S3_BUCKET_URI="${OPTARG}" ;;
+    s) SOURCE_DIR="${OPTARG}" ;;
+    u) AWS_S3_BUCKET_URI="${OPTARG}" ;;
     i) AWS_CF_DISTRIBUTION_ID="${OPTARG}" ;;
     v) VERBOSE=1 ;;
-    *) log "Unknown option ${opt}" ;;
+    *) help && exit 1 ;;
   esac
 done
 
-# Validate inputs
-test -z "${SOURCE_DIR}" && log "!!! No source directory specified" && ERR=1
-test -z "${AWS_CF_DISTRIBUTION_ID}" && log "!!! No CloudFront Distribution ID specified" && ERR=1
-test -z "${AWS_S3_BUCKET_URI}" && log "!!! No S3 Bucket URI specified" && ERR=1
-test "${ERR}" -eq 1 && help && exit 1
+# Test if required variables are set
+test -z "${SOURCE_DIR}" && log "No source directory provided" && ERR=1
+test -z "${AWS_S3_BUCKET_URI}" && log "No AWS S3 Bucket URI provided" && ERR=1
+test -z "${AWS_CF_DISTRIBUTION_ID}" && log "No AWS CloudFront Distribution ID provided" && ERR=1
+test "${ERR}" -gt 0 && help && exit 1
 
+# Test if AWS_S3_PATH is valid (when provided)
+if [ -n "${AWS_S3_PATH}" ] && ! (echo "${AWS_S3_PATH}" | grep -Eq '^/')
+then
+  fail "Invalid AWS S3 Bucket path: '${AWS_S3_PATH}' (needs to start with '/')"
+fi
+
+# Test if AWS_S3_BUCKET_URI is valid
 if ! (echo "${AWS_S3_BUCKET_URI}" | grep -Eq '^s3://[a-zA-Z0-9._-]+/')
 then
-  log "!!! Invalid S3 URI: ${AWS_S3_BUCKET_URI} (It needs to be in the following format: s3://<bucket-name>/[<directory>])"
-  ERR=1
+  fail "Invalid AWS S3 Bucket URI: '${AWS_S3_BUCKET_URI}' (needs to be in the following format: 's3://<bucket>/[<subdir>]')"
 fi
-test "${ERR}" -gt 0 && exit 1
 
-# Run the operations
-log "==> Files in S3 (copying)"
-s3_cp "${SOURCE_DIR}" "${AWS_S3_BUCKET_URI}"
-log "==> Files in S3 (copied)"
+############
+### Main ###
+############
 
-log "==> CloudFront Invalidation (creating)"
-AWS_CF_INVALIDATION_ID=$(cf_invalidate "${AWS_CF_DISTRIBUTION_ID}")
-log "==> CloudFront Invalidation (waiting)"
-cf_wait "${AWS_CF_DISTRIBUTION_ID}" "${AWS_CF_INVALIDATION_ID}"
-log "==> CloudFront Invalidation (finished)"
+banner "Deploy to S3 (running)"
+s3_deploy "${SOURCE_DIR}" "${AWS_S3_BUCKET_URI}" \
+  || fail "Deploy to S3 (failed)"
+banner "Deploy to S3 (finished)"
+
+banner "Invalidate in CloudFront (running)"
+AWS_CF_INVALIDATION_ID=$(cf_invalidate "${AWS_CF_DISTRIBUTION_ID}" \
+  || fail "Invalidate in CloudFront (failed on request)")
+cf_wait "${AWS_CF_DISTRIBUTION_ID}" "${AWS_CF_INVALIDATION_ID}" \
+  || fail "Invalidate in CloudFront (failed on wait)"
+banner "Invalidate in CloudFront (finished)"
