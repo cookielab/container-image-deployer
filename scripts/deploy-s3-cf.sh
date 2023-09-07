@@ -57,10 +57,9 @@ s3_deploy() {
   src_dir="${1}"
   s3_uri="${2}"
   s3_bucket=$(echo "${s3_uri}" | awk -F/ '{print $3}')
-  s3_dir=/$(echo "${s3_uri}" |\
-    awk -F/ 'BEGIN { OFS="/"; ORS=""; } { for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS)}' |\
-    sed 's|/*$||' \
-  )
+  s3_dir=/$(echo "${s3_uri}" \
+    | awk -F/ 'BEGIN { OFS="/"; ORS=""; } { for (i=4; i<=NF; i++) printf "%s%s", $i, (i<NF ? OFS : ORS)}' \
+    | sed 's|/*$||')
   log "Source directory" "${src_dir}"
   log "Destination S3 Bucket name" "${s3_bucket}"
   log "Destination S3 Bucket path" "${s3_dir}"
@@ -86,7 +85,7 @@ cf_invalidate() {
   test "${VERBOSE}" -gt 0 && set -x
   val=$(aws cloudfront create-invalidation --distribution-id "${cf_dist_id}" --paths '/*' --output json)
   ret=$?; set +x
-  echo "${val}" | jq -r .Invalidation.Id
+  test "${ret}" -eq 0 && (echo "${val}" | jq -r .Invalidation.Id)
   return ${ret}
 }
 
@@ -131,15 +130,15 @@ while getopts "h?s:u:i:v?" opt; do
     u) AWS_S3_BUCKET_URI="${OPTARG}" ;;
     i) AWS_CF_DISTRIBUTION_ID="${OPTARG}" ;;
     v) VERBOSE=1 ;;
-    *) help && exit 1 ;;
+    *) echo && help && exit 1 ;;
   esac
 done
 
 # Test if required variables are set
-test -z "${SOURCE_DIR}" && log "No source directory provided" && ERR=1
-test -z "${AWS_S3_BUCKET_URI}" && log "No AWS S3 Bucket URI provided" && ERR=1
-test -z "${AWS_CF_DISTRIBUTION_ID}" && log "No AWS CloudFront Distribution ID provided" && ERR=1
-test "${ERR}" -gt 0 && help && exit 1
+test -z "${SOURCE_DIR}" && log "No SOURCE_DIR (-s) provided" && ERR=1
+test -z "${AWS_S3_BUCKET_URI}" && log "No AWS_S3_BUCKET_URI (-u) provided" && ERR=1
+test -z "${AWS_CF_DISTRIBUTION_ID}" && log "No AWS_CF_DISTRIBUTION_ID (-i) provided" && ERR=1
+test "${ERR}" -gt 0 && echo && help && false
 
 # Test if AWS_S3_PATH is valid (when provided)
 if [ -n "${AWS_S3_PATH}" ] && ! (echo "${AWS_S3_PATH}" | grep -Eq '^/')
