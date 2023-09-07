@@ -2,11 +2,24 @@
 
 help() {
   echo "Usage: $0 [-h] [-v] -d <SOURCE_DIR> -b <AWS_S3_BUCKET_URI> -i <AWS_CF_DISTRIBUTION_ID>"
+  echo ""
+  echo "Options:"
+  echo "  -d SOURCE_DIR"
+  echo "        Local source directory. Required!"
+  echo "  -b AWS_S3_BUCKET_URI"
+  echo "        AWS S3 bucket URI in the following format: 's3://<bucket>/[<directory>]'. Required!"
+  echo "  -i AWS_CF_DISTRIBUTION_ID"
+  echo "        AWS CloudFront Distribution ID. Required!"
+  echo "  -v    Verbose output (print API commands being executed)"
   echo "  -h    Display this help message"
-  echo "  -v    Verbose output (commands are being executed)"
-  echo "  -d    Local source directory"
-  echo "  -b    AWS S3 bucket URI (s3://<bucket-name>/[<directory>])"
-  echo "  -i    AWS CloudFront Distribution ID"
+  echo ""
+  echo "Other supported environment variables:"
+  echo "  AWS_S3_BUCKET  Can be used to construct the S3 bucket URI."
+  echo "                 If used, AWS_S3_BUCKET_URI doesn't have to be set."
+  echo "  AWS_S3_PATH    Can be used to construct the S3 bucket URI. Has to start with '/'."
+  echo "                 Works only when AWS_S3_BUCKET is set. Defaults to '/'."
+  echo ""
+  echo "All mandatory options can be provided as environment variables."
 }
 
 log() {
@@ -85,16 +98,13 @@ OPTIND=1
 VERBOSE=0
 ERR=0
 
-# Use the old input variables
-test -n "${AWS_S3_BUCKET}" && AWS_S3_BUCKET_URI="s3://${AWS_S3_BUCKET}/"
+# Use the optional input variables when defined
+test -n "${AWS_S3_BUCKET}" && AWS_S3_BUCKET_URI="s3://${AWS_S3_BUCKET}${AWS_S3_PATH:-/}"
 
 # Parse command line
 while getopts "h?d:b:i:v?" opt; do
   case "${opt}" in
-    h)
-      help
-      exit 0
-      ;;
+    h) help && exit 0 ;;
     d) SOURCE_DIR="${OPTARG}" ;;
     b) AWS_S3_BUCKET_URI="${OPTARG}" ;;
     i) AWS_CF_DISTRIBUTION_ID="${OPTARG}" ;;
@@ -109,7 +119,7 @@ test -z "${AWS_CF_DISTRIBUTION_ID}" && log "!!! No CloudFront Distribution ID sp
 test -z "${AWS_S3_BUCKET_URI}" && log "!!! No S3 Bucket URI specified" && ERR=1
 test "${ERR}" -eq 1 && help && exit 1
 
-if (echo "${AWS_S3_BUCKET_URI}" | grep -Eq '^s3://[a-zA-Z0-9._-]+/')
+if ! (echo "${AWS_S3_BUCKET_URI}" | grep -Eq '^s3://[a-zA-Z0-9._-]+/')
 then
   log "!!! Invalid S3 URI: ${AWS_S3_BUCKET_URI} (It needs to be in the following format: s3://<bucket-name>/[<directory>])"
   ERR=1
