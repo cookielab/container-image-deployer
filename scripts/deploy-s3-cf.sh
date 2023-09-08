@@ -1,44 +1,57 @@
 #!/bin/sh
 
 help() {
-  echo "Usage: $0 [-h] [-v] -s <SOURCE_DIR> -u <AWS_S3_BUCKET_URI> -i <AWS_CF_DISTRIBUTION_ID>"
-  echo ""
+  echo "Usage: $0 [-h] [-v] [-c] -s <SOURCE_DIR> -u <AWS_S3_BUCKET_URI> -i <AWS_CF_DISTRIBUTION_ID>"
+  echo
   echo "Options:"
   echo "  -s SOURCE_DIR"
   echo "        Local source directory"
   echo "        REQUIRED (Can be also provided via environment variable)"
   echo "  -u AWS_S3_BUCKET_URI"
   echo "        AWS S3 bucket URI in the following format: 's3://<bucket>/[<subdir>]'"
-  echo "        REQUIRED (Can be also provided via environment variable or constructed. See below)"
+  echo "        REQUIRED (Can be also provided via environment variable or"
+  echo "        constructed from optional variables - see below)"
   echo "  -i AWS_CF_DISTRIBUTION_ID"
   echo "        AWS CloudFront Distribution ID"
   echo "        REQUIRED (Can be also provided via environment variable)"
-  echo "  -v    Verbose output (print API commands being executed)"
+  echo "  -c    Enable color output. Defaults to autodetection from TERM."
+  echo "  -v    Enable verbose output (print API commands being executed)."
   echo "  -h    Display this help message"
-  echo ""
-  echo "Other supported environment variables:"
+  echo
+  echo "Other environment variables:"
   echo "  AWS_S3_BUCKET  Can be used to construct the S3 bucket URI."
   echo "                 If used, AWS_S3_BUCKET_URI doesn't have to be set."
   echo "  AWS_S3_PATH    Can be used to further specify bucket path in the S3 URI."
   echo "                 Has to start with '/'. Works only when AWS_S3_BUCKET is set."
   echo "                 Defaults to '/'."
+  echo "  COLORIZE       Set to 1 to enable color output (or use -c). Set to 0 to disable."
+  echo "                 By default it's autodetected from TERM."
+  echo "  VERBOSE        Set to 1 to enable verbose output (or use -v). Defaults to 0."
 }
 
 # Format functions
 log() {
   if [ $# -eq 2 ]; then
-    printf -- "--> %-28s %s\n" "${1}:" "$2" >&2
+    _fmt="\033[32;3m--> \033[2m\033[32;2m%-28s\033[0m \033[34;5m%s\033[0m\n"
+    test "${COLORIZE}" -eq 0 && _fmt="--> %-28s %s\n"
+    printf -- "${_fmt}" "${1}:" "$2" >&2
   else
-    echo "$@" >&2
+    _fmt="\033[31;3m%s\033[0m\n"
+    test "${COLORIZE}" -eq 0 && _fmt="%s\n"
+    printf -- "${_fmt}" "${@}" >&2
   fi
 }
 
 banner() {
-  echo ">>> $*" >&2
+  _fmt="\033[32;1m>>> \033[3m%s\033[0m\n"
+  test "${COLORIZE}" -eq 0 && _fmt=">>> %s\n"
+  printf -- "${_fmt}" "${@}" >&2
 }
 
 fail() {
-  echo "==> $*" >&2
+  _fmt="\033[31;1m==> \033[3m%s\033[0m\n"
+  test "${COLORIZE}" -eq 0 && _fmt="==> %s\n"
+  printf -- "${_fmt}" "${@}" >&2
   return 1
 }
 
@@ -66,8 +79,8 @@ s3_deploy() {
   cmd_opts="--recursive"
   test "${VERBOSE}" -gt 0 && set -x
   aws s3 cp ${cmd_opts} "${src_dir}" "s3://${s3_bucket}${s3_dir}"
-  ret=$?; set +x
-  return ${ret}
+  _ret=$?; set +x
+  return ${_ret}
 }
 
 # CloudFront: Invalidate
@@ -83,10 +96,10 @@ cf_invalidate() {
   cf_dist_id="${1}"
   log "CloudFront Distribution ID" "${cf_dist_id}"
   test "${VERBOSE}" -gt 0 && set -x
-  val=$(aws cloudfront create-invalidation --distribution-id "${cf_dist_id}" --paths '/*' --output json)
-  ret=$?; set +x
-  test "${ret}" -eq 0 && (echo "${val}" | jq -r .Invalidation.Id)
-  return ${ret}
+  _val=$(aws cloudfront create-invalidation --distribution-id "${cf_dist_id}" --paths '/*' --output json)
+  _ret=$?; set +x
+  test "${_ret}" -eq 0 && (echo "${_val}" | jq -r .Invalidation.Id)
+  return ${_ret}
 }
 
 # CloudFront: Wait
@@ -106,8 +119,8 @@ cf_wait() {
   log "CloudFront Invalidation ID" "${cf_inv_id}"
   test "${VERBOSE}" -gt 0 && set -x
   aws cloudfront wait invalidation-completed --distribution-id "${cf_dist_id}" --id "${cf_inv_id}"
-  ret=$?; set +x
-  return ${ret}
+  _ret=$?; set +x
+  return ${_ret}
 }
 
 ##################
@@ -116,19 +129,28 @@ cf_wait() {
 
 set -e
 OPTIND=1
-VERBOSE=0
 ERR=0
+VERBOSE=${VERBOSE:-0}
+
+# Colorize autodetection
+[ "${CI}" = "true" ] && COLORIZE=${COLORIZE:-1}
+case "${TERM}" in
+  *color|[kK]itty*|[aA]lacritty|[xXaAeEiI][tT]erm*)
+     COLORIZE=${COLORIZE:-1} ;;
+  *) COLORIZE=${COLORIZE:-0} ;;
+esac
 
 # Use the optional input variables when defined
 test -n "${AWS_S3_BUCKET}" && AWS_S3_BUCKET_URI="s3://${AWS_S3_BUCKET}${AWS_S3_PATH:-/}"
 
 # Parse command line
-while getopts "h?s:u:i:v?" opt; do
+while getopts "h?s:u:i:v?c?" opt; do
   case "${opt}" in
     h) help && exit 0 ;;
     s) SOURCE_DIR="${OPTARG}" ;;
     u) AWS_S3_BUCKET_URI="${OPTARG}" ;;
     i) AWS_CF_DISTRIBUTION_ID="${OPTARG}" ;;
+    c) COLORIZE=1 ;;
     v) VERBOSE=1 ;;
     *) echo && help && exit 1 ;;
   esac
@@ -140,16 +162,18 @@ test -z "${AWS_S3_BUCKET_URI}" && log "No AWS_S3_BUCKET_URI (-u) provided" && ER
 test -z "${AWS_CF_DISTRIBUTION_ID}" && log "No AWS_CF_DISTRIBUTION_ID (-i) provided" && ERR=1
 test "${ERR}" -gt 0 && echo && help && false
 
-# Test if AWS_S3_PATH is valid (when provided)
-if [ -n "${AWS_S3_PATH}" ] && ! (echo "${AWS_S3_PATH}" | grep -Eq '^/')
+# Validate AWS_S3_PATH (when provided)
+if [ -n "${AWS_S3_BUCKET}" ] && [ -n "${AWS_S3_PATH}" ] && ! (echo "${AWS_S3_PATH}" | grep -Eq '^/')
 then
-  fail "Invalid AWS S3 Bucket path: '${AWS_S3_PATH}' (needs to start with '/')"
+  log "Invalid AWS_S3_PATH: '${AWS_S3_PATH}' does NOT start with '/'"
+  false
 fi
 
-# Test if AWS_S3_BUCKET_URI is valid
+# Validate AWS_S3_BUCKET_URI
 if ! (echo "${AWS_S3_BUCKET_URI}" | grep -Eq '^s3://[a-zA-Z0-9._-]+/')
 then
-  fail "Invalid AWS S3 Bucket URI: '${AWS_S3_BUCKET_URI}' (needs to be in the following format: 's3://<bucket>/[<subdir>]')"
+  log "Invalid AWS_S3_BUCKET_URI (-u): '${AWS_S3_BUCKET_URI}' does NOT follow format 's3://<bucket>/[<subdir>]'"
+  false
 fi
 
 ############
