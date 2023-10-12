@@ -29,7 +29,7 @@ FROM cookielab/container-image-tools:1.4.0-aws AS container-image-tools
 
 FROM cookielab/slim:12.0
 
-RUN apt update && apt install -y curl jq skopeo git \
+RUN apt update && apt install -y curl jq skopeo git gettext-base \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /usr/local/bin /usr/local/bin
