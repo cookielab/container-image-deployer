@@ -9,7 +9,7 @@ on:
 env:
   kubectl_version: 1.28.5 # https://github.com/kubernetes/kubernetes/releases
   helm_version: 3.13.3 # https://github.com/helm/helm/releases
-  sentry_cli_version: 2.19.4 # https://github.com/getsentry/sentry-cli/releases/
+  sentry_cli_version: 2.25.0 # https://github.com/getsentry/sentry-cli/releases/
   aws_cli_version: 2.12.7 # https://github.com/aws/aws-cli/tags
 
 jobs:
