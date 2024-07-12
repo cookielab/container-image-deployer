@@ -23,6 +23,7 @@ ARG AWS_CLI_VERSION
 COPY build-scripts/download-aws-cli.sh /tmp/download-aws-cli.sh
 RUN /tmp/download-aws-cli.sh
 
+COPY scripts/assume-role.sh /usr/local/bin/assume-role
 COPY scripts/deploy-s3-cf.sh /usr/local/bin/deploy-s3-cf
 
 FROM cookielab/container-image-tools:1.4.0-aws AS container-image-tools
