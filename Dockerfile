@@ -1,4 +1,4 @@
-FROM cookielab/slim:12.0 AS build
+FROM cookielab/slim:12.8 AS build
 
 ARG TARGETARCH
 WORKDIR /tmp
@@ -26,9 +26,9 @@ RUN /tmp/download-aws-cli.sh
 COPY scripts/assume-role.sh /usr/local/bin/assume-role
 COPY scripts/deploy-s3-cf.sh /usr/local/bin/deploy-s3-cf
 
-FROM cookielab/container-image-tools:1.4.0-aws AS container-image-tools
+FROM cookielab/container-image-tools:1.7.2-aws AS container-image-tools
 
-FROM cookielab/slim:12.0
+FROM cookielab/slim:12.8
 
 RUN apt update && apt install -y curl jq skopeo git gettext-base procps zip \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
