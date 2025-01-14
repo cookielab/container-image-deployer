@@ -13,3 +13,10 @@
         - `$AWS_ROLE_ARN` = ENV variable for Role ARN
         - `$AWS_ROLE_SESSION_NAME` = ENV variable for session name
         - `$OIDC_TOKEN` = ENV variable for providing OIDC token
+- `helm-rollback.sh` - Script for rolling back failed Helm releases
+    - Checks for pending or failed releases
+    - Waits up to 15 minutes for pending releases to complete
+    - If still pending/failed after wait, rolls back to previous version
+    - Requirements:
+        - `$HELM_RELEASE_NAME` = ENV variable for Helm release name
+        - `$KUBE_NAMESPACE` = ENV variable for Kubernetes namespace
