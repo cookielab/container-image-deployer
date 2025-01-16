@@ -61,7 +61,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Build and push - testing - slim
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         timeout-minutes: 15
         if: ${{ !steps.get-version.outputs.is-semver }}
         with:
@@ -80,7 +80,7 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
       
       - name: Build and push - pre-release - slim
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         timeout-minutes: 15
         if: ${{ steps.get-version.outputs.is-semver && steps.get-version.outputs.prerelease != '' }}
         with:
@@ -99,7 +99,7 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ steps.get-version.outputs.version-without-v }}
       
       - name: Build and push - stable - slim
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         timeout-minutes: 15
         if: ${{ steps.get-version.outputs.is-semver && steps.get-version.outputs.prerelease == '' }}
         with:
