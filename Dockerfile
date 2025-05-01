@@ -1,4 +1,4 @@
-FROM cookielab/slim:12.9 AS build
+FROM cookielab/slim:12.10 AS build
 
 ARG TARGETARCH
 WORKDIR /tmp
@@ -29,7 +29,7 @@ COPY scripts/helm-rollback.sh /usr/local/bin/helm-rollback
 
 FROM cookielab/container-image-tools:1.8.0-aws AS container-image-tools
 
-FROM cookielab/slim:12.9
+FROM cookielab/slim:12.10
 
 RUN apt update && apt install -y curl jq skopeo git gettext-base procps zip \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
