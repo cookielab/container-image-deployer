@@ -27,7 +27,7 @@ COPY scripts/assume-role.sh /usr/local/bin/assume-role
 COPY scripts/deploy-s3-cf.sh /usr/local/bin/deploy-s3-cf
 COPY scripts/helm-rollback.sh /usr/local/bin/helm-rollback
 
-FROM cookielab/container-image-tools:1.9.0-aws AS container-image-tools
+FROM cookielab/container-image-tools:1.9.1-aws AS container-image-tools
 
 FROM cookielab/slim:12.10
 
